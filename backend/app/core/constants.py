@@ -1,0 +1,22 @@
+"""应用常量。"""
+
+# 密码强度
+PASSWORD_MIN_LENGTH = 6
+PASSWORD_PATTERN = r"^(?=.*[A-Za-z])(?=.*\d).{6,}$"
+
+# 媒体文件类型
+FILE_TYPE_IMAGE = "image"
+FILE_TYPE_VIDEO = "video"
+
+# 日程优先级
+PRIORITY_NORMAL = 0
+PRIORITY_IMPORTANT = 1
+PRIORITY_URGENT = 2
+
+# 日程状态
+STATUS_PENDING = "pending"
+STATUS_IN_PROGRESS = "in_progress"
+STATUS_COMPLETED = "completed"
+
+# 维护 API
+MAINTENANCE_TIMESTAMP_MAX_AGE_SECONDS = 300

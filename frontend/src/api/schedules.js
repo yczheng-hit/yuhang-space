@@ -32,4 +32,8 @@ export const schedulesApi = {
   listMedia(id) {
     return api.get(`/schedules/${id}/media`)
   },
+
+  deleteMedia(scheduleId, mediaId) {
+    return api.delete(`/schedules/${scheduleId}/media/${mediaId}`)
+  },
 }

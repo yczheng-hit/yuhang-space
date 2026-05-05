@@ -20,7 +20,7 @@ function handleLogout() {
 
       <nav class="flex items-center gap-4">
         <template v-if="auth.isAuthenticated">
-          <router-link to="/schedules" class="text-gray-600 hover:text-gray-900">日程</router-link>
+          <router-link to="/schedules" class="text-gray-600 hover:text-gray-900">日记</router-link>
           <router-link to="/recipes" class="text-gray-600 hover:text-gray-900">菜谱</router-link>
           <router-link to="/chat" class="text-gray-600 hover:text-gray-900">AI 助手</router-link>
           <button

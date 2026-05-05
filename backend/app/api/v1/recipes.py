@@ -69,3 +69,10 @@ async def upload_media(
 async def list_media(recipe_id: uuid.UUID, db: DBSession, user: CurrentUser):
     """列出菜谱的所有媒体文件。"""
     return await media_service.get_media_by_recipe(db, recipe_id)
+
+
+@router.delete("/{recipe_id}/media/{media_id}")
+async def delete_media(recipe_id: uuid.UUID, media_id: uuid.UUID, db: DBSession, user: CurrentUser):
+    """删除媒体文件。"""
+    await media_service.delete_media(db, media_id, user.id)
+    return {"detail": "已删除"}

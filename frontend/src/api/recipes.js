@@ -32,4 +32,8 @@ export const recipesApi = {
   listMedia(id) {
     return api.get(`/recipes/${id}/media`)
   },
+
+  deleteMedia(recipeId, mediaId) {
+    return api.delete(`/recipes/${recipeId}/media/${mediaId}`)
+  },
 }

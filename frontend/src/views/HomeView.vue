@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const features = [
-  { title: '日程管理', desc: '创建和管理您的日程安排', path: '/schedules', icon: '📅' },
+  { title: '生活日记', desc: '记录每天的生活点滴', path: '/schedules', icon: '📔' },
   { title: '菜谱库', desc: '收藏和管理您的菜谱', path: '/recipes', icon: '🍳' },
   { title: 'AI 助手', desc: '智能对话，自动生成日程和菜谱', path: '/chat', icon: '🤖' },
 ]

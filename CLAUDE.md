@@ -1,12 +1,12 @@
 # 寰宇智杭 (yuhang-space) — AI 协作指南
 
 ## 项目概述
-智能生活管理平台：日程管理 + 多媒体存储 + 菜谱管理 + 大模型辅助。
+智能生活管理平台：生活日记 + 多媒体存储 + 菜谱管理 + 大模型辅助。
 
 ## 技术栈
-- **后端**: Python 3.12 + FastAPI + LangChain + SQLAlchemy (async) + PostgreSQL
+- **后端**: Python 3.12 + FastAPI + LangChain + SQLAlchemy (async) + SQLite (aiosqlite)
 - **前端**: Vue 3 + Vite + TailwindCSS v4 + Pinia + Axios
-- **部署**: Linux 原生 (Nginx + systemd)
+- **部署**: Linux 原生 (Nginx + systemd)，开发环境零依赖
 
 ## 严格规范
 - 所有文件路径操作**必须**使用 `pathlib`，严禁硬编码斜杠拼接
@@ -27,18 +27,23 @@ backend/app/
   core/        — 异常、常量、工具函数
 frontend/src/
   api/         — Axios HTTP 客户端
-  components/  — 可复用 UI 组件
+  components/  — 可复用 UI 组件（含表单弹窗、媒体上传/展示）
   views/       — 页面级组件
   stores/      — Pinia 状态管理
   composables/ — 组合函数
 ```
 
+## 数据库
+- 开发环境使用 SQLite，文件位于 `backend/yuhang_space.db`
+- 模型使用 `sqlalchemy.types.Uuid` / `JSON`，不用 `dialects.postgresql`
+- Alembic 管理迁移：`cd backend && python -m alembic upgrade head`
+
 ## 常用命令
 ```bash
 # 后端
-cd backend && pip install -e ".[dev]"
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-alembic upgrade head
+cd backend
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m alembic upgrade head
 ruff check app/
 mypy app/
 

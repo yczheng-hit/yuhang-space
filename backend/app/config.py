@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
 
     # 数据库
-    DATABASE_URL: str = "postgresql+asyncpg://yuhang:password@localhost:5432/yuhang_space"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./yuhang_space.db"
 
     # JWT 认证
     JWT_SECRET_KEY: str = "CHANGE_ME_TO_A_RANDOM_64_CHAR_STRING"

@@ -1,6 +1,5 @@
 """JWT 工具测试。"""
 
-import pytest
 
 from app.security.jwt import (
     create_access_token,

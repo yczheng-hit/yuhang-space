@@ -22,11 +22,6 @@ class UnauthorizedException(AppException):
         super().__init__(status_code=401, detail=detail)
 
 
-class ForbiddenException(AppException):
-    def __init__(self, detail: str = "禁止访问"):
-        super().__init__(status_code=403, detail=detail)
-
-
 class BadRequestException(AppException):
     def __init__(self, detail: str = "请求无效"):
         super().__init__(status_code=400, detail=detail)

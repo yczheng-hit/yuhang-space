@@ -5,9 +5,6 @@ export const recipesApi = {
     return api.get('/recipes', { params })
   },
 
-  get(id) {
-    return api.get(`/recipes/${id}`)
-  },
 
   create(data) {
     return api.post('/recipes', data)

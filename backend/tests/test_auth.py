@@ -1,6 +1,5 @@
 """认证模块测试 — 注册、登录、刷新 Token。"""
 
-import pytest
 from httpx import AsyncClient
 
 from tests.conftest import auth_headers, register_and_login

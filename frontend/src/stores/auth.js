@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { authApi } from '../api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null)
   const isAuthenticated = ref(!!localStorage.getItem('access_token'))
 
   async function register(data) {
@@ -24,8 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     isAuthenticated.value = false
-    user.value = null
   }
 
-  return { user, isAuthenticated, register, login, logout }
+  return { isAuthenticated, register, login, logout }
 })

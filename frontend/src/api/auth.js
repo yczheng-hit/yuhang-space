@@ -9,7 +9,5 @@ export const authApi = {
     return api.post('/auth/login', data)
   },
 
-  refresh(refreshToken) {
-    return api.post('/auth/refresh', { refresh_token: refreshToken })
-  },
+
 }

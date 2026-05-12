@@ -1,6 +1,5 @@
 """日程模块测试 — CRUD 操作。"""
 
-import pytest
 from httpx import AsyncClient
 
 from tests.conftest import auth_headers, register_and_login

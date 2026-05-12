@@ -5,9 +5,6 @@ export const schedulesApi = {
     return api.get('/schedules', { params })
   },
 
-  get(id) {
-    return api.get(`/schedules/${id}`)
-  },
 
   create(data) {
     return api.post('/schedules', data)

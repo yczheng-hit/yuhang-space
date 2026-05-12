@@ -20,16 +20,18 @@
 ## 技术栈
 
 **后端**
-- Python 3.12 + FastAPI
-- SQLAlchemy (async) + SQLite (aiosqlite)
-- LangChain + OpenAI 兼容协议
-- JWT 认证 + bcrypt 密码哈希
+- Python 3.12 + FastAPI (≥0.115)
+- SQLAlchemy 2.0 (async) + SQLite (aiosqlite)
+- LangChain (≥0.3) + OpenAI 兼容协议
+- JWT 认证 (PyJWT ≥2.9) + bcrypt 密码哈希
+- Pydantic v2 (≥2.9) + pydantic-settings (≥2.6)
 
 **前端**
-- Vue 3 + Vite
-- TailwindCSS v4
-- Pinia 状态管理
-- Axios HTTP 客户端
+- Vue 3 (≥3.5) + Vite (≥6.2)
+- TailwindCSS v4 (≥4.0) + @tailwindcss/vite
+- Pinia (≥2.3) 状态管理
+- Axios (≥1.7) HTTP 客户端
+- vue-router (≥4.5)
 
 ## 快速开始
 
@@ -44,14 +46,13 @@
 cd backend
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install fastapi uvicorn sqlalchemy aiosqlite alembic pyjwt bcrypt pydantic pydantic-settings langchain langchain-openai httpx python-dotenv aiofiles
+pip install -e ".[dev]"
 
 # 配置环境变量
 cp ../.env.example ../.env
 # 编辑 .env 填入 JWT 密钥等配置（数据库默认 SQLite，无需额外配置）
 
 # 初始化数据库
-cd backend
 python -m alembic upgrade head
 
 # 启动
@@ -68,6 +69,39 @@ npm run dev
 
 访问 http://localhost:5174
 
+## 配置说明
+
+复制 `.env.example` 为 `.env` 后按需修改：
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `DATABASE_URL` | 数据库连接 | `sqlite+aiosqlite:///./yuhang_space.db` |
+| `JWT_SECRET_KEY` | JWT 签名密钥 | 需手动设置 |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Access Token 过期时间 | 30 |
+| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | Refresh Token 过期时间 | 7 |
+| `LLM_ENABLED` | 启用大模型 | true |
+| `LLM_API_KEY` | 大模型 API Key | - |
+| `LLM_BASE_URL` | 大模型接口地址 | OpenAI |
+| `LLM_MODEL_NAME` | 模型名称 | gpt-4o-mini |
+| `MEDIA_ROOT` | 媒体文件存储目录 | `./media` |
+| `MAX_UPLOAD_SIZE_MB` | 最大上传大小 | 50 |
+| `BACKEND_PORT` | 后端端口 | 8000 |
+| `CORS_ORIGINS` | CORS 允许来源 | localhost:5173,3000 |
+
+## 生产部署
+
+当前部署方式：后端直接服务前端 dist + API + 媒体文件，端口 8080。
+
+```bash
+# 构建前端
+cd frontend && npm run build
+
+# 启动（后端同时服务前端静态文件）
+cd backend && .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+访问 http://your-server:8080
+
 ## 项目结构
 
 ```
@@ -81,17 +115,22 @@ backend/
     security/    → 认证工具
     core/        → 通用工具
   alembic/       → 数据库迁移
+  tests/         → pytest 单元测试 (44 个用例)
 frontend/
   src/
     api/         → HTTP 客户端
     components/  → UI 组件（含表单弹窗、媒体上传/展示）
     views/       → 页面
     stores/      → Pinia 状态
+tests/
+  web_test.py    → E2E 测试 (71 个用例)
 ```
 
 ## API 文档
 
 启动后端后访问 http://localhost:8000/docs 查看 Swagger 文档。
+
+详细 API 文档见 [docs/API.md](docs/API.md)
 
 ## 许可
 

@@ -6,9 +6,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
-from app.dependencies import CurrentUser, DBSession
+from app.dependencies import CurrentUser
 from app.schemas.llm import ChatRequest, GenerateRecipeRequest, GenerateScheduleRequest
-from app.services import schedule_service, recipe_service
 
 router = APIRouter()
 

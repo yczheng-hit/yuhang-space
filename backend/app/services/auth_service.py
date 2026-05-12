@@ -35,7 +35,7 @@ async def register(db: AsyncSession, req: RegisterRequest) -> User:
     try:
         validate_password_strength(req.password)
     except ValueError as e:
-        raise BadRequestException(str(e))
+        raise BadRequestException(str(e)) from e
 
     # 检查用户名唯一性
     existing = await db.execute(

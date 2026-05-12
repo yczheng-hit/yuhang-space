@@ -1,6 +1,5 @@
 """运维路由 — 健康检查、统计、清理。"""
 
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select

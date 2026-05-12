@@ -1,7 +1,6 @@
 """媒体文件业务逻辑。"""
 
 import uuid
-from pathlib import Path
 
 import aiofiles
 from fastapi import UploadFile

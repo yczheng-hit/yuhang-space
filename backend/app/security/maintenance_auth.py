@@ -27,7 +27,7 @@ async def verify_maintenance_auth(
     try:
         ts = int(x_timestamp)
     except (ValueError, TypeError):
-        raise HTTPException(status_code=403, detail="时间戳无效")
+        raise HTTPException(status_code=403, detail="时间戳无效") from None
 
     now = int(time.time())
     if abs(now - ts) > MAINTENANCE_TIMESTAMP_MAX_AGE_SECONDS:

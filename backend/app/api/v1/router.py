@@ -3,10 +3,10 @@
 from fastapi import APIRouter
 
 from app.api.v1.auth import router as auth_router
-from app.api.v1.schedules import router as schedules_router
-from app.api.v1.recipes import router as recipes_router
 from app.api.v1.llm import router as llm_router
 from app.api.v1.maintenance import router as maintenance_router
+from app.api.v1.recipes import router as recipes_router
+from app.api.v1.schedules import router as schedules_router
 
 api_router = APIRouter()
 

@@ -5,20 +5,20 @@ from typing import Annotated
 from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import UnauthorizedException
 from app.database import get_async_session
 from app.security.jwt import decode_access_token
-from app.core.exceptions import UnauthorizedException
 
 # 类型别名
 DBSession = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 async def get_current_user(
-    authorization: Annotated[str, Header()],
-    db: DBSession,
+    authorization: Annotated[str | None, Header()] = None,
+    db: DBSession = None,
 ):
     """从 Authorization header 解析当前用户。"""
-    if not authorization.startswith("Bearer "):
+    if not authorization or not authorization.startswith("Bearer "):
         raise UnauthorizedException("缺少 Bearer token")
 
     token = authorization.removeprefix("Bearer ")

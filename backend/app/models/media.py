@@ -1,16 +1,23 @@
 """媒体文件 ORM 模型。"""
 
+from __future__ import annotations
+
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
 
+if TYPE_CHECKING:
+    from app.models.recipe import Recipe
+    from app.models.schedule import Schedule
+
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class MediaFile(Base):
@@ -43,5 +50,5 @@ class MediaFile(Base):
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
 
-    schedule: Mapped["Schedule | None"] = relationship("Schedule", back_populates="media_files")
-    recipe: Mapped["Recipe | None"] = relationship("Recipe", back_populates="media_files")
+    schedule: Mapped[Schedule | None] = relationship("Schedule", back_populates="media_files")
+    recipe: Mapped[Recipe | None] = relationship("Recipe", back_populates="media_files")

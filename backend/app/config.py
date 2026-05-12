@@ -1,7 +1,6 @@
 """应用配置 — 从 .env 文件读取，类型化校验。"""
 
 from pathlib import Path
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -47,19 +46,19 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
     @property
-    def allowed_image_types_list(self) -> List[str]:
+    def allowed_image_types_list(self) -> list[str]:
         return [t.strip() for t in self.ALLOWED_IMAGE_TYPES.split(",")]
 
     @property
-    def allowed_video_types_list(self) -> List[str]:
+    def allowed_video_types_list(self) -> list[str]:
         return [t.strip() for t in self.ALLOWED_VIDEO_TYPES.split(",")]
 
     @property
-    def allowed_maintenance_ips_list(self) -> List[str]:
+    def allowed_maintenance_ips_list(self) -> list[str]:
         return [ip.strip() for ip in self.MAINTENANCE_ALLOWED_IPS.split(",")]
 
     @property

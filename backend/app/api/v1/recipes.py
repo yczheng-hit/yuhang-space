@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, File, UploadFile
 
 from app.dependencies import CurrentUser, DBSession
 from app.schemas.recipe import RecipeCreate, RecipeResponse, RecipeUpdate

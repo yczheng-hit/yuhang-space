@@ -9,7 +9,7 @@
 ## 功能
 
 - 用户注册/登录（用户名 + 密码）
-- 生活日记（emoji 心情、标签、图片/视频附件）
+- 生活日记（emoji 心情、标签、图片/视频附件，支持列表/时间线/日历三种视图）
 - 菜谱库（食材、步骤、标签、图片/视频）
 - 多媒体上传与回放（图片预览、视频播放）
 - 编辑已提交的内容
@@ -56,7 +56,7 @@ cp ../.env.example ../.env
 python -m alembic upgrade head
 
 # 启动
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
 ### 前端
@@ -64,10 +64,10 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 cd frontend
 npm install
-npm run dev
+npx vite build
 ```
 
-访问 http://localhost:5174
+访问 http://localhost:8080
 
 ## 配置说明
 
@@ -85,12 +85,12 @@ npm run dev
 | `LLM_MODEL_NAME` | 模型名称 | gpt-4o-mini |
 | `MEDIA_ROOT` | 媒体文件存储目录 | `./media` |
 | `MAX_UPLOAD_SIZE_MB` | 最大上传大小 | 50 |
-| `BACKEND_PORT` | 后端端口 | 8000 |
-| `CORS_ORIGINS` | CORS 允许来源 | localhost:5173,3000 |
+| `BACKEND_PORT` | 后端端口 | 8080 |
+| `CORS_ORIGINS` | CORS 允许来源 | localhost:8080 |
 
 ## 生产部署
 
-当前部署方式：后端直接服务前端 dist + API + 媒体文件，端口 8080。
+后端直接服务前端 dist + API + 媒体文件，统一端口 8080。
 
 ```bash
 # 构建前端
@@ -122,13 +122,14 @@ frontend/
     components/  → UI 组件（含表单弹窗、媒体上传/展示）
     views/       → 页面
     stores/      → Pinia 状态
+  dist/          → 前端构建产物（由后端 SPA 服务提供）
 tests/
   web_test.py    → E2E 测试 (71 个用例)
 ```
 
 ## API 文档
 
-启动后端后访问 http://localhost:8000/docs 查看 Swagger 文档。
+启动后端后访问 http://localhost:8080/docs 查看 Swagger 文档。
 
 详细 API 文档见 [docs/API.md](docs/API.md)
 

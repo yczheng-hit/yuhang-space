@@ -1,6 +1,7 @@
 """日程业务逻辑。"""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,16 +36,30 @@ async def get_schedule(
 
 
 async def list_schedules(
-    db: AsyncSession, user_id: uuid.UUID, skip: int = 0, limit: int = 50
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
+    status: str | None = None,
+    priority: int | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
 ) -> list[Schedule]:
-    """列出用户的所有日程。"""
-    result = await db.execute(
-        select(Schedule)
-        .where(Schedule.user_id == user_id)
-        .order_by(Schedule.start_time.desc())
-        .offset(skip)
-        .limit(limit)
-    )
+    """列出用户日程，支持状态、优先级、日期范围过滤与分页。"""
+    stmt = select(Schedule).where(Schedule.user_id == user_id)
+
+    if status is not None:
+        stmt = stmt.where(Schedule.status == status)
+    if priority is not None:
+        stmt = stmt.where(Schedule.priority == priority)
+    if start_date is not None:
+        stmt = stmt.where(Schedule.start_time >= start_date)
+    if end_date is not None:
+        stmt = stmt.where(Schedule.start_time <= end_date)
+
+    stmt = stmt.order_by(Schedule.start_time.desc()).offset(skip).limit(limit)
+
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 

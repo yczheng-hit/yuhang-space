@@ -23,12 +23,12 @@ function onFileChange(e) {
     if (file.type.startsWith('image/')) {
       const reader = new FileReader()
       reader.onload = (ev) => {
-        previews.value.push({ file, url: ev.target.result, type: 'image' })
+        previews.value.push({ file, url: ev.target.result, type: 'image', mediaType: 'cover' })
         emit('files-changed', previews.value)
       }
       reader.readAsDataURL(file)
     } else if (file.type.startsWith('video/')) {
-      previews.value.push({ file, url: URL.createObjectURL(file), type: 'video' })
+      previews.value.push({ file, url: URL.createObjectURL(file), type: 'video', mediaType: 'step' })
       emit('files-changed', previews.value)
     }
   }
@@ -50,7 +50,7 @@ async function uploadAll() {
   error.value = ''
   try {
     for (const item of previews.value) {
-      await props.uploadFn(item.file)
+      await props.uploadFn(item.file, item.mediaType)
     }
     previews.value = []
     emit('uploaded')
@@ -65,6 +65,10 @@ defineExpose({ uploadAll, clearPreviews, uploading })
 
 function getMediaUrl(filePath) {
   return `/media/${filePath}`
+}
+
+function getMediaTypeLabel(type) {
+  return type === 'cover' ? '成品图' : '步骤图'
 }
 </script>
 
@@ -87,6 +91,10 @@ function getMediaUrl(filePath) {
         <div v-else class="w-full h-full bg-gray-900 flex items-center justify-center">
           <span class="text-white text-lg">▶</span>
         </div>
+        <span
+          v-if="media.media_type"
+          class="absolute bottom-0 left-0 right-0 text-xs text-white bg-black/60 text-center py-0.5"
+        >{{ getMediaTypeLabel(media.media_type) }}</span>
         <button
           type="button"
           @click="emit('delete-media', media.id)"
@@ -104,6 +112,13 @@ function getMediaUrl(filePath) {
       >
         <img v-if="item.type === 'image'" :src="item.url" class="w-full h-full object-cover" />
         <video v-else :src="item.url" class="w-full h-full object-cover" muted />
+        <select
+          v-model="item.mediaType"
+          class="absolute bottom-0 left-0 right-0 text-xs bg-black/70 text-white border-none outline-none text-center py-0.5 cursor-pointer"
+        >
+          <option value="cover">成品图</option>
+          <option value="step">步骤图</option>
+        </select>
         <button
           type="button"
           @click="removePreview(index)"

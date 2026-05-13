@@ -10,6 +10,8 @@ const showModal = ref(false)
 const editingEntry = ref(null)
 const mediaMap = ref({})
 const viewMode = ref('list')
+const currentMonth = ref(new Date())
+const selectedDate = ref(null)
 
 onMounted(async () => {
   await store.fetchSchedules()
@@ -100,6 +102,109 @@ function formatTime(dateStr) {
 function getMediaUrl(filePath) {
   return `/media/${filePath}`
 }
+
+// Calendar helpers
+function toDateStr(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const holidays = {
+  '2026-01-01': { name: '元旦', color: 'text-red-500' },
+  '2026-02-16': { name: '除夕', color: 'text-red-500' },
+  '2026-02-17': { name: '春节', color: 'text-red-500' },
+  '2026-04-04': { name: '清明', color: 'text-gray-500' },
+  '2026-05-01': { name: '劳动节', color: 'text-red-500' },
+  '2026-06-19': { name: '端午', color: 'text-red-500' },
+  '2026-09-25': { name: '中秋', color: 'text-red-500' },
+  '2026-10-01': { name: '国庆', color: 'text-red-500' },
+}
+
+const entriesByDate = computed(() => {
+  const map = {}
+  for (const entry of store.schedules) {
+    const key = toDateStr(new Date(entry.start_time))
+    if (!map[key]) map[key] = []
+    map[key].push(entry)
+  }
+  return map
+})
+
+const todayStr = computed(() => toDateStr(new Date()))
+
+const calendarDays = computed(() => {
+  const year = currentMonth.value.getFullYear()
+  const month = currentMonth.value.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const startDow = firstDay.getDay() // 0=Sun
+  const totalDays = lastDay.getDate()
+
+  const days = []
+
+  // Previous month padding
+  const prevLastDay = new Date(year, month, 0).getDate()
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = prevLastDay - i
+    const date = new Date(year, month - 1, d)
+    const dateStr = toDateStr(date)
+    const dayEntries = entriesByDate.value[dateStr] || []
+    days.push({ dateStr, day: d, isCurrentMonth: false, entries: dayEntries, holiday: holidays[dateStr] || null, moodEmoji: dayEntries.length ? moodMap[dayEntries[0].priority]?.emoji : null })
+  }
+
+  // Current month
+  for (let d = 1; d <= totalDays; d++) {
+    const date = new Date(year, month, d)
+    const dateStr = toDateStr(date)
+    const dayEntries = entriesByDate.value[dateStr] || []
+    days.push({ dateStr, day: d, isCurrentMonth: true, entries: dayEntries, holiday: holidays[dateStr] || null, moodEmoji: dayEntries.length ? moodMap[dayEntries[0].priority]?.emoji : null })
+  }
+
+  // Next month padding to fill 6 rows (42 cells)
+  const remaining = 42 - days.length
+  for (let d = 1; d <= remaining; d++) {
+    const date = new Date(year, month + 1, d)
+    const dateStr = toDateStr(date)
+    const dayEntries = entriesByDate.value[dateStr] || []
+    days.push({ dateStr, day: d, isCurrentMonth: false, entries: dayEntries, holiday: holidays[dateStr] || null, moodEmoji: dayEntries.length ? moodMap[dayEntries[0].priority]?.emoji : null })
+  }
+
+  return days
+})
+
+const selectedDateEntries = computed(() => {
+  if (!selectedDate.value) return []
+  return entriesByDate.value[selectedDate.value] || []
+})
+
+const calendarTitle = computed(() => {
+  return currentMonth.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })
+})
+
+function prevMonth() {
+  const d = new Date(currentMonth.value)
+  d.setMonth(d.getMonth() - 1)
+  currentMonth.value = d
+  selectedDate.value = null
+}
+
+function nextMonth() {
+  const d = new Date(currentMonth.value)
+  d.setMonth(d.getMonth() + 1)
+  currentMonth.value = d
+  selectedDate.value = null
+}
+
+function goToToday() {
+  currentMonth.value = new Date()
+  selectedDate.value = toDateStr(new Date())
+}
+
+function selectDate(dateStr) {
+  selectedDate.value = selectedDate.value === dateStr ? null : dateStr
+}
 </script>
 
 <template>
@@ -128,6 +233,14 @@ function getMediaUrl(filePath) {
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             时间线
           </button>
+          <button
+            @click="viewMode = 'calendar'"
+            class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-all duration-300"
+            :class="viewMode === 'calendar' ? 'bg-white text-violet-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+            日历
+          </button>
         </div>
         <button
           @click="openCreate"
@@ -144,7 +257,139 @@ function getMediaUrl(filePath) {
       <p class="text-gray-500 mt-3 sm:mt-4 text-sm">加载中...</p>
     </div>
 
-    <!-- Empty state -->
+    <!-- Calendar View (always shows regardless of entries) -->
+    <div v-else-if="viewMode === 'calendar'">
+      <!-- Month navigation -->
+      <div class="flex items-center justify-between mb-4 sm:mb-5 bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-white/80">
+        <div class="flex items-center gap-2">
+          <button
+            @click="prevMonth"
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-all duration-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+          </button>
+          <h2 class="text-base sm:text-lg font-bold text-gray-800 min-w-[140px] text-center">{{ calendarTitle }}</h2>
+          <button
+            @click="nextMonth"
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-all duration-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+          </button>
+        </div>
+        <button
+          @click="goToToday"
+          class="px-3 py-1.5 text-xs font-medium text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-all duration-200 border border-violet-100"
+        >
+          今天
+        </button>
+      </div>
+
+      <!-- Calendar grid -->
+      <div class="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-sm border border-white/80 overflow-hidden">
+        <div class="grid grid-cols-7 border-b border-gray-100">
+          <div v-for="w in ['日','一','二','三','四','五','六']" :key="w" class="py-2 sm:py-2.5 text-center text-[10px] sm:text-xs font-medium text-gray-400">
+            {{ w }}
+          </div>
+        </div>
+        <div class="grid grid-cols-7">
+          <div
+            v-for="(cell, idx) in calendarDays"
+            :key="idx"
+            @click="selectDate(cell.dateStr)"
+            class="relative aspect-square flex flex-col items-center justify-center cursor-pointer transition-all duration-200 border-b border-r border-gray-50/80 hover:bg-violet-50/50"
+            :class="[
+              cell.dateStr === selectedDate ? 'bg-gradient-to-br from-violet-100 to-fuchsia-100' : '',
+              !cell.isCurrentMonth ? 'opacity-30' : '',
+            ]"
+          >
+            <!-- Mood emoji -->
+            <span v-if="cell.moodEmoji" class="text-[10px] sm:text-xs leading-none mb-0.5">{{ cell.moodEmoji }}</span>
+            <span
+              class="text-xs sm:text-sm font-medium leading-none"
+              :class="[
+                cell.dateStr === todayStr ? 'text-violet-600 font-bold' : cell.isCurrentMonth ? 'text-gray-700' : 'text-gray-400',
+                cell.dateStr === selectedDate ? 'text-violet-700' : '',
+              ]"
+            >
+              {{ cell.day }}
+            </span>
+            <!-- Holiday label -->
+            <span v-if="cell.holiday" class="text-[8px] sm:text-[10px] leading-tight mt-0.5 font-medium" :class="cell.holiday.color">
+              {{ cell.holiday.name }}
+            </span>
+            <!-- Dot indicators for multiple entries -->
+            <div v-if="cell.entries.length > 1" class="flex gap-0.5 mt-0.5">
+              <div
+                v-for="n in Math.min(cell.entries.length, 3)"
+                :key="n"
+                class="w-1 h-1 rounded-full"
+                :class="cell.dateStr === selectedDate ? 'bg-fuchsia-500' : 'bg-violet-400'"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected date entries -->
+      <div v-if="selectedDate" class="mt-4 sm:mt-5">
+        <h3 class="text-sm sm:text-base font-bold text-gray-700 mb-3">
+          {{ selectedDate }} — {{ selectedDateEntries.length }} 篇日记
+        </h3>
+        <div v-if="selectedDateEntries.length === 0" class="text-center py-8 bg-white/50 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/80 shadow-sm">
+          <p class="text-gray-400 text-sm">这一天还没有日记</p>
+        </div>
+        <div v-else class="space-y-3">
+          <div
+            v-for="entry in selectedDateEntries"
+            :key="entry.id"
+            class="relative bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-md border border-white/80 hover:shadow-xl active:scale-[0.99] transition-all duration-500 cursor-pointer group"
+            @click="openEdit(entry)"
+          >
+            <div class="flex items-start gap-2 sm:gap-3">
+              <span class="text-lg sm:text-2xl flex-shrink-0">{{ moodMap[entry.priority]?.emoji }}</span>
+              <div class="flex-1 min-w-0">
+                <h4 class="font-bold text-gray-800 text-sm sm:text-base mb-1 sm:mb-1.5">{{ entry.title }}</h4>
+                <p v-if="entry.description" class="text-xs sm:text-sm text-gray-500 line-clamp-2 leading-relaxed">
+                  {{ truncate(entry.description) }}
+                </p>
+                <div class="flex items-center gap-2 mt-2 sm:mt-3 flex-wrap">
+                  <span class="text-[10px] sm:text-xs text-gray-400">{{ formatTime(entry.start_time) }}</span>
+                  <div v-if="entry.tags?.length" class="flex gap-1">
+                    <span
+                      v-for="tag in entry.tags.slice(0, 2)"
+                      :key="tag"
+                      class="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs bg-gradient-to-r from-violet-50 to-fuchsia-50 text-violet-600 rounded-full border border-violet-100"
+                    >{{ tag }}</span>
+                  </div>
+                  <span v-if="mediaMap[entry.id]?.length" class="text-[10px] sm:text-xs text-gray-400">
+                    {{ mediaMap[entry.id].length }} 个媒体
+                  </span>
+                </div>
+              </div>
+              <div v-if="getFirstImage(entry)" class="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+                <img :src="getMediaUrl(getFirstImage(entry).file_path)" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              </div>
+            </div>
+            <div class="absolute top-2 right-2 sm:top-3 sm:right-3 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
+              <button
+                @click.stop="openEdit(entry)"
+                class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-all duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+              </button>
+              <button
+                @click.stop="handleDelete(entry.id)"
+                class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state (only for list/timeline) -->
     <div v-else-if="store.schedules.length === 0" class="text-center py-12 sm:py-20 bg-white/50 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/80 shadow-lg">
       <div class="text-5xl sm:text-6xl mb-4 animate-bounce-slow">📝</div>
       <p class="text-gray-600 text-base sm:text-lg font-medium mb-2">还没有日记</p>
@@ -237,7 +482,7 @@ function getMediaUrl(filePath) {
     </div>
 
     <!-- Timeline View -->
-    <div v-else class="relative">
+    <div v-else-if="viewMode === 'timeline'" class="relative">
       <!-- Vertical gradient line -->
       <div class="absolute left-4 sm:left-[19px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-violet-300 via-fuchsia-300 to-pink-300"></div>
 

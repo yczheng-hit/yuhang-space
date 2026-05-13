@@ -12,6 +12,11 @@ class IngredientItem(BaseModel):
     unit: str
 
 
+class LinkItem(BaseModel):
+    url: str
+    comment: str = ""
+
+
 class RecipeCreate(BaseModel):
     title: str = Field(..., max_length=200)
     description: str | None = None
@@ -21,6 +26,8 @@ class RecipeCreate(BaseModel):
     cook_time_min: int | None = None
     servings: int | None = None
     tags: list[str] = []
+    price: float = 0.0
+    links: list[LinkItem] = []
     ai_generated: bool = False
 
 
@@ -33,6 +40,8 @@ class RecipeUpdate(BaseModel):
     cook_time_min: int | None = None
     servings: int | None = None
     tags: list[str] | None = None
+    price: float | None = None
+    links: list[LinkItem] | None = None
 
 
 class RecipeResponse(BaseModel):
@@ -46,6 +55,8 @@ class RecipeResponse(BaseModel):
     cook_time_min: int | None
     servings: int | None
     tags: list[str]
+    price: float
+    links: list[dict]
     ai_generated: bool
     created_at: datetime
     updated_at: datetime

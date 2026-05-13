@@ -57,12 +57,20 @@ async def delete(recipe_id: uuid.UUID, db: DBSession, user: CurrentUser):
 async def upload_media(
     recipe_id: uuid.UUID,
     file: UploadFile = File(...),
+    media_type: str | None = None,
     db: DBSession = None,
     user: CurrentUser = None,
 ):
-    """为菜谱上传媒体文件。"""
-    media = await media_service.upload_media(db, user.id, file, recipe_id=recipe_id)
-    return {"id": media.id, "file_path": media.file_path, "file_type": media.file_type}
+    """为菜谱上传媒体文件。media_type: cover(成品图) 或 step(步骤图)。"""
+    media = await media_service.upload_media(
+        db, user.id, file, recipe_id=recipe_id, media_type=media_type
+    )
+    return {
+        "id": media.id,
+        "file_path": media.file_path,
+        "file_type": media.file_type,
+        "media_type": media.media_type,
+    }
 
 
 @router.get("/{recipe_id}/media")

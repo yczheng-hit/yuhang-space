@@ -24,6 +24,8 @@ async def create_recipe(
         cook_time_min=data.cook_time_min,
         servings=data.servings,
         tags=data.tags,
+        price=data.price,
+        links=[lnk.model_dump() for lnk in data.links],
         ai_generated=data.ai_generated,
     )
     db.add(recipe)
@@ -69,6 +71,11 @@ async def update_recipe(
         update_data["ingredients"] = [
             i.model_dump() if hasattr(i, "model_dump") else i
             for i in update_data["ingredients"]
+        ]
+    if "links" in update_data and update_data["links"] is not None:
+        update_data["links"] = [
+            lnk.model_dump() if hasattr(lnk, "model_dump") else lnk
+            for lnk in update_data["links"]
         ]
     for field, value in update_data.items():
         setattr(recipe, field, value)

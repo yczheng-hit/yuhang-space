@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field
 
 
 class ScheduleCreate(BaseModel):
-    title: str = Field(..., max_length=200)
+    title: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
     start_time: datetime
     end_time: datetime | None = None
-    priority: int = Field(default=0, ge=0, le=2)
+    priority: int = Field(default=0, ge=0, le=4)
     status: str = Field(default="pending")
     recurrence_rule: str | None = None
     tags: list[str] = []
@@ -19,11 +19,11 @@ class ScheduleCreate(BaseModel):
 
 
 class ScheduleUpdate(BaseModel):
-    title: str | None = Field(default=None, max_length=200)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
-    priority: int | None = Field(default=None, ge=0, le=2)
+    priority: int | None = Field(default=None, ge=0, le=4)
     status: str | None = None
     recurrence_rule: str | None = None
     tags: list[str] | None = None

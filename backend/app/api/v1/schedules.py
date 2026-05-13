@@ -1,8 +1,9 @@
 """日程路由 — CRUD + 媒体上传。"""
 
 import uuid
+from datetime import datetime
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, Query, UploadFile
 
 from app.dependencies import CurrentUser, DBSession
 from app.schemas.schedule import ScheduleCreate, ScheduleResponse, ScheduleUpdate
@@ -22,11 +23,19 @@ async def create(data: ScheduleCreate, db: DBSession, user: CurrentUser):
 async def list_all(
     db: DBSession,
     user: CurrentUser,
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int | None = Query(None, ge=0),
+    status: str | None = None,
+    priority: int | None = Query(None, ge=0, le=4),
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
 ):
-    """列出当前用户的所有日程。"""
-    return await schedule_service.list_schedules(db, user.id, skip, limit)
+    """列出当前用户的日程，支持过滤与分页。"""
+    effective_skip = offset if offset is not None else skip
+    return await schedule_service.list_schedules(
+        db, user.id, effective_skip, limit, status, priority, start_date, end_date,
+    )
 
 
 @router.get("/{schedule_id}", response_model=ScheduleResponse)

@@ -20,6 +20,8 @@ const form = ref({
   cook_time_min: props.entry?.cook_time_min ?? null,
   servings: props.entry?.servings ?? null,
   tags: props.entry?.tags ? [...props.entry.tags] : [],
+  price: props.entry?.price ?? 0,
+  links: props.entry?.links?.length ? [...props.entry.links] : [{ url: '', comment: '' }],
 })
 
 const tagInput = ref('')
@@ -55,8 +57,16 @@ function removeTag(index) {
   form.value.tags.splice(index, 1)
 }
 
-async function handleUpload(file) {
-  await recipesApi.uploadMedia(props.entry.id, file)
+function addLink() {
+  form.value.links.push({ url: '', comment: '' })
+}
+
+function removeLink(index) {
+  if (form.value.links.length > 1) form.value.links.splice(index, 1)
+}
+
+async function handleUpload(file, mediaType) {
+  await recipesApi.uploadMedia(props.entry.id, file, mediaType)
   const { data } = await recipesApi.listMedia(props.entry.id)
   mediaList.value = data
 }
@@ -72,8 +82,9 @@ async function handleSubmit() {
   try {
     const payload = {
       ...form.value,
-      ingredients: form.value.ingredients.filter(i => i.trim()),
+      ingredients: form.value.ingredients.filter(i => typeof i === 'object' ? i.name?.trim() : i.trim()),
       instructions: form.value.instructions.filter(i => i.trim()),
+      links: form.value.links.filter(l => l.url.trim()),
     }
     await emit('submit', payload)
   } finally {
@@ -111,6 +122,19 @@ async function handleSubmit() {
               placeholder="简单描述一下这道菜..."
               class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             ></textarea>
+          </div>
+
+          <!-- 定价 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">定价（元）</label>
+            <input
+              v-model.number="form.price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0"
+              class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <div>
@@ -223,6 +247,37 @@ async function handleSubmit() {
                 添加
               </button>
             </div>
+          </div>
+
+          <!-- 链接 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">相关链接</label>
+            <div class="space-y-2">
+              <div v-for="(link, index) in form.links" :key="index" class="flex gap-2">
+                <input
+                  v-model="link.url"
+                  type="url"
+                  placeholder="https://..."
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  v-model="link.comment"
+                  type="text"
+                  placeholder="备注"
+                  class="w-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  @click="removeLink(index)"
+                  class="px-2 py-2 text-gray-400 hover:text-red-500"
+                >&times;</button>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="addLink"
+              class="mt-2 text-sm text-blue-500 hover:text-blue-700"
+            >+ 添加链接</button>
           </div>
 
           <!-- 媒体上传（仅编辑模式） -->

@@ -20,6 +20,7 @@ async def upload_media(
     file: UploadFile,
     schedule_id: uuid.UUID | None = None,
     recipe_id: uuid.UUID | None = None,
+    media_type: str | None = None,
 ) -> MediaFile:
     """上传并保存媒体文件。"""
     if not file.content_type:
@@ -63,6 +64,7 @@ async def upload_media(
         mime_type=file.content_type,
         file_size_bytes=len(content),
         original_name=file.filename or "unknown",
+        media_type=media_type,
     )
     db.add(media)
     await db.commit()

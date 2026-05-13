@@ -5,7 +5,6 @@ export const recipesApi = {
     return api.get('/recipes', { params })
   },
 
-
   create(data) {
     return api.post('/recipes', data)
   },
@@ -18,10 +17,11 @@ export const recipesApi = {
     return api.delete(`/recipes/${id}`)
   },
 
-  uploadMedia(id, file) {
+  uploadMedia(id, file, mediaType) {
     const formData = new FormData()
     formData.append('file', file)
-    return api.post(`/recipes/${id}/media`, formData, {
+    const params = mediaType ? `?media_type=${mediaType}` : ''
+    return api.post(`/recipes/${id}/media${params}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },

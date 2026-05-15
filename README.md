@@ -10,7 +10,9 @@
 
 - 用户注册/登录（用户名 + 密码）
 - 生活日记（emoji 心情、标签、图片/视频附件，支持列表/时间线/日历三种视图）
+- 体重记录（多角色管理、每日体重、Chart.js 折线图趋势展示）
 - 菜谱库（食材、步骤、标签、图片/视频）
+- 购物车/点菜功能
 - 多媒体上传与回放（图片预览、视频播放）
 - 编辑已提交的内容
 - AI 对话（流式响应）
@@ -31,7 +33,7 @@
 - TailwindCSS v4 (≥4.0) + @tailwindcss/vite
 - Pinia (≥2.3) 状态管理
 - Axios (≥1.7) HTTP 客户端
-- vue-router (≥4.5)
+- Chart.js (≥4.4) 图表库
 
 ## 快速开始
 
@@ -120,11 +122,11 @@ frontend/
   src/
     api/         → HTTP 客户端
     components/  → UI 组件（含表单弹窗、媒体上传/展示）
-    views/       → 页面
+    views/       → 页面（日记/菜谱/购物车/体重/AI 助手）
     stores/      → Pinia 状态
   dist/          → 前端构建产物（由后端 SPA 服务提供）
 tests/
-  web_test.py    → E2E 测试 (71 个用例)
+  web_test.py    → E2E 测试 (98 个用例)
 ```
 
 ## API 文档

@@ -8,6 +8,7 @@ from app.api.v1.maintenance import router as maintenance_router
 from app.api.v1.orders import router as orders_router
 from app.api.v1.recipes import router as recipes_router
 from app.api.v1.schedules import router as schedules_router
+from app.api.v1.weights import router as weights_router
 
 api_router = APIRouter()
 
@@ -17,3 +18,4 @@ api_router.include_router(recipes_router, prefix="/recipes", tags=["菜谱"])
 api_router.include_router(orders_router, prefix="/orders", tags=["点菜"])
 api_router.include_router(llm_router, prefix="/llm", tags=["大模型"])
 api_router.include_router(maintenance_router, prefix="/maintenance", tags=["运维"])
+api_router.include_router(weights_router, prefix="/weights", tags=["体重"])

@@ -41,6 +41,12 @@ const routes = [
     component: () => import('../views/ChatView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/weights',
+    name: 'Weights',
+    component: () => import('../views/WeightView.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

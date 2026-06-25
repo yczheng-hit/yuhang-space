@@ -26,6 +26,8 @@ class OrderResponse(BaseModel):
     quantity: int
     unit_price: float
     note: str | None
+    status: str
+    submitted_at: datetime | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

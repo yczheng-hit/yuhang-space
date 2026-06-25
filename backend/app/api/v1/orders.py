@@ -33,6 +33,32 @@ async def get_cart(
     return await order_service.get_cart_summary(db, user.id, cart_name)
 
 
+@router.post("/cart/{cart_name}/submit")
+async def submit_cart(cart_name: str, db: DBSession, user: CurrentUser):
+    """提交购物车，将状态改为已提交。"""
+    count = await order_service.submit_cart(db, user.id, cart_name)
+    return {"detail": f"已提交 {count} 项"}
+
+
+@router.get("/history")
+async def list_history(db: DBSession, user: CurrentUser):
+    """列出已提交的历史订单批次（按提交时间分组）。"""
+    return await order_service.list_submitted_batches(db, user.id)
+
+
+@router.get("/history/{submitted_at}")
+async def get_history(submitted_at: str, db: DBSession, user: CurrentUser):
+    """获取指定批次的历史订单详情。"""
+    return await order_service.get_submitted_batch(db, user.id, submitted_at)
+
+
+@router.delete("/history/{submitted_at}")
+async def delete_history(submitted_at: str, db: DBSession, user: CurrentUser):
+    """删除指定批次的历史订单。"""
+    count = await order_service.delete_submitted_batch(db, user.id, submitted_at)
+    return {"detail": f"已删除 {count} 项"}
+
+
 @router.patch("/{order_id}", response_model=OrderResponse)
 async def update_order(
     order_id: uuid.UUID,

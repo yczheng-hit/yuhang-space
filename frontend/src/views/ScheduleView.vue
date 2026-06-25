@@ -3,15 +3,28 @@ import { ref, computed, onMounted } from 'vue'
 import { useScheduleStore } from '../stores/schedule'
 import { schedulesApi } from '../api/schedules'
 import ScheduleFormModal from '../components/ScheduleFormModal.vue'
+import ScheduleDetailModal from '../components/ScheduleDetailModal.vue'
 import MediaGallery from '../components/MediaGallery.vue'
 
 const store = useScheduleStore()
 const showModal = ref(false)
 const editingEntry = ref(null)
+const detailEntry = ref(null)
 const mediaMap = ref({})
 const viewMode = ref('list')
 const currentMonth = ref(new Date())
 const selectedDate = ref(null)
+const sortBy = ref('date') // 'date' = 日记时间, 'created' = 添加时间
+
+const sortedSchedules = computed(() => {
+  const arr = [...store.schedules]
+  if (sortBy.value === 'created') {
+    arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  } else {
+    arr.sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
+  }
+  return arr
+})
 
 onMounted(async () => {
   await store.fetchSchedules()
@@ -33,7 +46,7 @@ const moodMap = {
 
 const timelineGroups = computed(() => {
   const groups = {}
-  for (const entry of store.schedules) {
+  for (const entry of sortedSchedules.value) {
     const dateKey = new Date(entry.start_time).toLocaleDateString('zh-CN', {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
     })
@@ -60,8 +73,24 @@ function openCreate() {
 }
 
 function openEdit(entry) {
+  detailEntry.value = null
   editingEntry.value = entry
   showModal.value = true
+}
+
+function openDetail(entry) {
+  detailEntry.value = entry
+}
+
+function handleEditFromDetail(entry) {
+  detailEntry.value = null
+  editingEntry.value = entry
+  showModal.value = true
+}
+
+async function handleDeleteFromDetail(id) {
+  detailEntry.value = null
+  await handleDelete(id)
 }
 
 async function handleSubmit(data, resolve) {
@@ -124,7 +153,7 @@ const holidays = {
 
 const entriesByDate = computed(() => {
   const map = {}
-  for (const entry of store.schedules) {
+  for (const entry of sortedSchedules.value) {
     const key = toDateStr(new Date(entry.start_time))
     if (!map[key]) map[key] = []
     map[key].push(entry)
@@ -251,6 +280,29 @@ function selectDate(dateStr) {
       </div>
     </div>
 
+    <!-- Sort toggle (list/timeline only) -->
+    <div v-if="viewMode !== 'calendar'" class="flex items-center gap-2 mb-4">
+      <span class="text-xs text-gray-400">排序:</span>
+      <button
+        @click="sortBy = 'date'"
+        class="px-3 py-1 text-xs rounded-full transition-all"
+        :class="sortBy === 'date'
+          ? 'bg-violet-100 text-violet-700 font-medium'
+          : 'bg-white/60 text-gray-500 hover:bg-white border border-gray-200'"
+      >
+        日记时间
+      </button>
+      <button
+        @click="sortBy = 'created'"
+        class="px-3 py-1 text-xs rounded-full transition-all"
+        :class="sortBy === 'created'
+          ? 'bg-violet-100 text-violet-700 font-medium'
+          : 'bg-white/60 text-gray-500 hover:bg-white border border-gray-200'"
+      >
+        添加时间
+      </button>
+    </div>
+
     <!-- Loading -->
     <div v-if="store.loading" class="text-center py-12 sm:py-16">
       <div class="inline-block w-8 h-8 sm:w-10 sm:h-10 border-3 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
@@ -343,7 +395,7 @@ function selectDate(dateStr) {
             v-for="entry in selectedDateEntries"
             :key="entry.id"
             class="relative bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-md border border-white/80 hover:shadow-xl active:scale-[0.99] transition-all duration-500 cursor-pointer group"
-            @click="openEdit(entry)"
+            @click="openDetail(entry)"
           >
             <div class="flex items-start gap-2 sm:gap-3">
               <span class="text-lg sm:text-2xl flex-shrink-0">{{ moodMap[entry.priority]?.emoji }}</span>
@@ -399,9 +451,10 @@ function selectDate(dateStr) {
     <!-- List View -->
     <div v-else-if="viewMode === 'list'" class="space-y-3 sm:space-y-4">
       <div
-        v-for="entry in store.schedules"
+        v-for="entry in sortedSchedules"
         :key="entry.id"
-        class="bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 border border-white/80 overflow-hidden group active:scale-[0.99]"
+        @click="openDetail(entry)"
+        class="bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 border border-white/80 overflow-hidden group active:scale-[0.99] cursor-pointer"
       >
         <div class="flex">
           <!-- Thumbnail - mobile: smaller -->
@@ -457,7 +510,7 @@ function selectDate(dateStr) {
               <!-- Actions: mobile always visible, desktop on hover -->
               <div class="flex items-center gap-0.5 sm:gap-1 ml-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0">
                 <button
-                  @click="openEdit(entry)"
+                  @click.stop="openEdit(entry)"
                   class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-all duration-200"
                   title="编辑"
                 >
@@ -475,9 +528,6 @@ function selectDate(dateStr) {
           </div>
         </div>
 
-        <div v-if="mediaMap[entry.id]?.length" class="px-3 pb-3 sm:px-4 sm:pb-4">
-          <MediaGallery :media="mediaMap[entry.id]" />
-        </div>
       </div>
     </div>
 
@@ -504,7 +554,7 @@ function selectDate(dateStr) {
             v-for="entry in entries"
             :key="entry.id"
             class="relative bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-md border border-white/80 hover:shadow-xl active:scale-[0.99] sm:hover:-translate-y-0.5 transition-all duration-500 cursor-pointer group"
-            @click="openEdit(entry)"
+            @click="openDetail(entry)"
           >
             <!-- Dot on timeline -->
             <div class="absolute -left-[21px] sm:-left-[33px] top-4 sm:top-6 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-white border-2 border-fuchsia-400 shadow-sm shadow-fuchsia-400/30"></div>
@@ -562,6 +612,14 @@ function selectDate(dateStr) {
       :entry="editingEntry"
       @close="showModal = false; editingEntry = null"
       @submit="handleSubmit"
+    />
+
+    <ScheduleDetailModal
+      v-if="detailEntry"
+      :entry="detailEntry"
+      @close="detailEntry = null"
+      @edit="handleEditFromDetail"
+      @delete="handleDeleteFromDetail"
     />
   </div>
 </template>

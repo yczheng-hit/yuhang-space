@@ -15,8 +15,8 @@ const form = ref({
   title: props.entry?.title || '',
   description: props.entry?.description || '',
   start_time: props.entry?.start_time
-    ? new Date(props.entry.start_time).toISOString().slice(0, 16)
-    : new Date().toISOString().slice(0, 16),
+    ? props.entry.start_time.slice(0, 16)
+    : new Date().toLocaleString('sv-SE', { hour12: false }).slice(0, 16),
   priority: props.entry?.priority ?? 1,
   tags: props.entry?.tags ? [...props.entry.tags] : [],
 })
@@ -77,7 +77,9 @@ async function handleSubmit() {
   try {
     const formData = {
       ...form.value,
-      start_time: new Date(form.value.start_time).toISOString(),
+      start_time: form.value.start_time.length === 16
+        ? form.value.start_time + ':00'
+        : form.value.start_time,
     }
     const created = await new Promise((resolve) => {
       emit('submit', formData, resolve)

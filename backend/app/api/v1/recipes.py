@@ -24,9 +24,10 @@ async def list_all(
     user: CurrentUser,
     skip: int = 0,
     limit: int = 50,
+    tag: str | None = None,
 ):
-    """列出当前用户的所有菜谱。"""
-    return await recipe_service.list_recipes(db, user.id, skip, limit)
+    """列出当前用户的所有菜谱，可按标签筛选。"""
+    return await recipe_service.list_recipes(db, user.id, skip, limit, tag)
 
 
 @router.get("/{recipe_id}", response_model=RecipeResponse)

@@ -6,10 +6,11 @@ export const useRecipeStore = defineStore('recipe', () => {
   const recipes = ref([])
   const loading = ref(false)
 
-  async function fetchRecipes() {
+  async function fetchRecipes(tag = null) {
     loading.value = true
     try {
-      const { data } = await recipesApi.list()
+      const params = tag ? { tag } : {}
+      const { data } = await recipesApi.list(params)
       recipes.value = data
     } finally {
       loading.value = false

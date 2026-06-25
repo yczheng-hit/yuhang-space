@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
@@ -48,16 +48,20 @@ async def get_recipe(
 
 
 async def list_recipes(
-    db: AsyncSession, user_id: uuid.UUID, skip: int = 0, limit: int = 50
+    db: AsyncSession, user_id: uuid.UUID, skip: int = 0, limit: int = 50, tag: str | None = None
 ) -> list[Recipe]:
-    """列出用户的所有菜谱。"""
-    result = await db.execute(
-        select(Recipe)
-        .where(Recipe.user_id == user_id)
-        .order_by(Recipe.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-    )
+    """列出用户的所有菜谱，可按标签筛选。"""
+    stmt = select(Recipe).where(Recipe.user_id == user_id)
+    if tag:
+        subquery = (
+            select(Recipe.id)
+            .where(Recipe.user_id == user_id)
+            .where(text("EXISTS (SELECT 1 FROM json_each(recipes.tags) WHERE json_each.value = :tag)"))
+            .params(tag=tag)
+        )
+        stmt = stmt.where(Recipe.id.in_(subquery))
+    stmt = stmt.order_by(Recipe.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 

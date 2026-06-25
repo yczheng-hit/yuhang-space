@@ -36,12 +36,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/chat',
-    name: 'Chat',
-    component: () => import('../views/ChatView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/weights',
     name: 'Weights',
     component: () => import('../views/WeightView.vue'),

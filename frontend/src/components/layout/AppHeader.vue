@@ -11,9 +11,8 @@ const mobileMenuOpen = ref(false)
 const navItems = [
   { path: '/schedules', label: '日记', icon: '📖' },
   { path: '/recipes', label: '菜谱', icon: '🍳' },
-  { path: '/orders', label: '点菜', icon: '🛒' },
+  { path: '/orders', label: '购物车', icon: '🛒' },
   { path: '/weights', label: '体重', icon: '⚖️' },
-  { path: '/chat', label: 'AI 助手', icon: '✨' },
 ]
 
 function isActive(path) {

@@ -1,7 +1,7 @@
 """体重相关 Pydantic 模型。"""
 
 import uuid
-from datetime import date, datetime
+from datetime import date as Date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -9,11 +9,15 @@ from pydantic import BaseModel, Field
 class WeightProfileCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=50)
     color: str | None = None
+    height: float | None = Field(default=None, gt=0, le=300)
+    target_weight: float | None = Field(default=None, gt=0, le=500)
 
 
 class WeightProfileUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=50)
     color: str | None = None
+    height: float | None = Field(default=None, gt=0, le=300)
+    target_weight: float | None = Field(default=None, gt=0, le=500)
 
 
 class WeightProfileResponse(BaseModel):
@@ -21,6 +25,8 @@ class WeightProfileResponse(BaseModel):
     user_id: uuid.UUID
     name: str
     color: str | None
+    height: float | None
+    target_weight: float | None
     record_count: int = 0
     created_at: datetime
     updated_at: datetime
@@ -30,12 +36,13 @@ class WeightProfileResponse(BaseModel):
 
 class WeightRecordCreate(BaseModel):
     weight: float = Field(..., gt=0, le=500)
-    date: date
+    date: Date
     note: str | None = Field(default=None, max_length=200)
 
 
 class WeightRecordUpdate(BaseModel):
     weight: float | None = Field(default=None, gt=0, le=500)
+    date: Date | None = None
     note: str | None = None
 
 
@@ -43,7 +50,7 @@ class WeightRecordResponse(BaseModel):
     id: uuid.UUID
     profile_id: uuid.UUID
     weight: float
-    date: date
+    date: Date
     note: str | None
     created_at: datetime
 

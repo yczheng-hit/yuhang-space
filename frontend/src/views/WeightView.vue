@@ -9,11 +9,23 @@ const store = useWeightStore()
 const showProfileModal = ref(false)
 const showRecordModal = ref(false)
 const editingRecord = ref(null)
-const newProfileName = ref('')
-const newProfileColor = ref('#8b5cf6')
+const editingProfile = ref(null)
+const profileForm = ref({ name: '', color: '#8b5cf6', height: null, target_weight: null })
 const recordForm = ref({ weight: null, date: new Date().toISOString().slice(0, 10), note: '' })
 const chartRef = ref(null)
+const quickWeight = ref(null)
+const timeRange = ref('all')
+const compareMode = ref(false)
+const compareSet = ref(new Set())
 let chartInstance = null
+
+const rangeOptions = [
+  { label: '7天', value: '7d' },
+  { label: '30天', value: '30d' },
+  { label: '90天', value: '90d' },
+  { label: '半年', value: '180d' },
+  { label: '全部', value: 'all' },
+]
 
 const colorOptions = [
   { label: '紫色', value: '#8b5cf6' },
@@ -28,8 +40,46 @@ const activeProfile = computed(() => {
   return store.profiles.find(p => p.id === store.activeProfileId) || null
 })
 
+const stats = computed(() => {
+  const recs = store.records
+  if (!recs.length) return null
+  const sorted = [...recs].sort((a, b) => a.date.localeCompare(b.date))
+  const latest = sorted[sorted.length - 1]
+  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null
+  const change = prev ? +(latest.weight - prev.weight).toFixed(1) : 0
+  const weights = sorted.map(r => r.weight)
+  const profile = activeProfile.value
+  let bmi = null, bmiCategory = ''
+  if (profile?.height) {
+    const h = profile.height / 100
+    bmi = +(latest.weight / (h * h)).toFixed(1)
+    if (bmi < 18.5) bmiCategory = '偏瘦'
+    else if (bmi < 24) bmiCategory = '正常'
+    else if (bmi < 28) bmiCategory = '偏胖'
+    else bmiCategory = '肥胖'
+  }
+  let targetProgress = null
+  if (profile?.target_weight) {
+    const start = sorted[0].weight
+    const target = profile.target_weight
+    const total = Math.abs(start - target)
+    const done = Math.abs(start - latest.weight)
+    targetProgress = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 100
+  }
+  return { current: latest.weight, change, min: Math.min(...weights), max: Math.max(...weights), days: recs.length, bmi, bmiCategory, targetProgress, targetWeight: profile?.target_weight }
+})
+
+const filteredRecords = computed(() => {
+  if (timeRange.value === 'all') return store.records
+  const days = parseInt(timeRange.value)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const cutoffStr = cutoff.toLocaleDateString('sv-SE')
+  return store.records.filter(r => r.date >= cutoffStr)
+})
+
 const chartData = computed(() => {
-  const sorted = [...store.records].sort((a, b) => a.date.localeCompare(b.date))
+  const sorted = [...filteredRecords.value].sort((a, b) => a.date.localeCompare(b.date))
   return {
     labels: sorted.map(r => r.date.slice(5)),
     values: sorted.map(r => r.weight),
@@ -113,17 +163,29 @@ function selectProfile(id) {
 }
 
 function openCreateProfile() {
-  newProfileName.value = ''
-  newProfileColor.value = '#8b5cf6'
+  editingProfile.value = null
+  profileForm.value = { name: '', color: '#8b5cf6', height: null, target_weight: null }
   showProfileModal.value = true
 }
 
-async function handleCreateProfile() {
-  if (!newProfileName.value.trim()) return
-  await store.createProfile({
-    name: newProfileName.value.trim(),
-    color: newProfileColor.value,
-  })
+function openEditProfile(profile) {
+  editingProfile.value = profile
+  profileForm.value = {
+    name: profile.name,
+    color: profile.color || '#8b5cf6',
+    height: profile.height,
+    target_weight: profile.target_weight,
+  }
+  showProfileModal.value = true
+}
+
+async function handleSaveProfile() {
+  if (!profileForm.value.name.trim()) return
+  if (editingProfile.value) {
+    await store.updateProfile(editingProfile.value.id, profileForm.value)
+  } else {
+    await store.createProfile(profileForm.value)
+  }
   showProfileModal.value = false
 }
 
@@ -131,6 +193,83 @@ async function handleDeleteProfile(id) {
   if (confirm('确定删除此角色及其所有体重记录？')) {
     await store.deleteProfile(id)
   }
+}
+
+async function handleQuickRecord() {
+  if (!quickWeight.value || !store.activeProfileId) return
+  await store.createRecord(store.activeProfileId, {
+    weight: quickWeight.value,
+    date: new Date().toISOString().slice(0, 10),
+    note: null,
+  })
+  quickWeight.value = null
+}
+
+async function toggleCompare() {
+  compareMode.value = !compareMode.value
+  if (compareMode.value) {
+    compareSet.value = new Set(store.profiles.map(p => p.id))
+    await store.fetchAllRecords()
+    renderCompareChart()
+  } else {
+    renderChart()
+  }
+}
+
+function toggleCompareProfile(id) {
+  const s = new Set(compareSet.value)
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+  compareSet.value = s
+  renderCompareChart()
+}
+
+function renderCompareChart() {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null }
+  if (!chartRef.value) return
+  const datasets = []
+  for (const pid of compareSet.value) {
+    const profile = store.profiles.find(p => p.id === pid)
+    const recs = (store.allRecords[pid] || []).sort((a, b) => a.date.localeCompare(b.date))
+    if (recs.length === 0) continue
+    datasets.push({
+      label: profile?.name || pid,
+      data: recs.map(r => r.weight),
+      borderColor: profile?.color || '#8b5cf6',
+      backgroundColor: (profile?.color || '#8b5cf6') + '15',
+      borderWidth: 2,
+      fill: false,
+      tension: 0.3,
+      pointRadius: 3,
+      pointBackgroundColor: profile?.color || '#8b5cf6',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 1.5,
+    })
+  }
+  if (datasets.length === 0) return
+  // Use union of all dates as labels
+  const allDates = new Set()
+  for (const pid of compareSet.value) {
+    (store.allRecords[pid] || []).forEach(r => allDates.add(r.date))
+  }
+  const labels = [...allDates].sort().map(d => d.slice(5))
+  const ctx = chartRef.value.getContext('2d')
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y} kg` } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: false, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, callback: (v) => v + ' kg' } },
+      },
+    },
+  })
 }
 
 function openAddRecord() {
@@ -190,19 +329,22 @@ function formatDate(dateStr) {
 
     <!-- Profile tabs -->
     <div class="flex items-center gap-2 mb-4 sm:mb-5 flex-wrap">
-      <button
-        v-for="profile in store.profiles"
-        :key="profile.id"
-        @click="selectProfile(profile.id)"
-        class="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-xl font-medium transition-all duration-200 border"
-        :class="profile.id === store.activeProfileId
-          ? 'text-white shadow-md border-transparent'
-          : 'text-gray-600 bg-white/60 hover:bg-white border-gray-200'"
-        :style="profile.id === store.activeProfileId ? { background: profile.color || '#8b5cf6' } : {}"
-      >
-        {{ profile.name }}
-        <span class="ml-1.5 opacity-70 text-[10px]">({{ profile.record_count }})</span>
-      </button>
+      <div v-for="profile in store.profiles" :key="profile.id" class="flex items-center gap-1">
+        <button
+          @click="selectProfile(profile.id)"
+          class="flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-xl font-medium transition-all duration-200 border"
+          :class="profile.id === store.activeProfileId
+            ? 'text-white shadow-md border-transparent'
+            : 'text-gray-600 bg-white/60 hover:bg-white border-gray-200'"
+          :style="profile.id === store.activeProfileId ? { background: profile.color || '#8b5cf6' } : {}"
+        >
+          {{ profile.name }}
+          <span class="opacity-70 text-[10px]">({{ profile.record_count }})</span>
+        </button>
+        <button @click="openEditProfile(profile)" class="w-6 h-6 flex items-center justify-center rounded-md text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition-colors" title="编辑角色">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+        </button>
+      </div>
       <button
         @click="openCreateProfile"
         class="px-3 py-1.5 text-xs sm:text-sm rounded-xl font-medium text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 transition-all duration-200"
@@ -240,9 +382,67 @@ function formatDate(dateStr) {
 
     <!-- Content -->
     <div v-else-if="activeProfile">
+      <!-- Quick record -->
+      <div class="bg-white/60 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-white/80 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="flex-1 relative">
+            <input v-model.number="quickWeight" type="number" step="0.1" placeholder="今日体重 (kg)" class="w-full px-4 py-2.5 pr-8 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm" @keydown.enter="handleQuickRecord" />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">kg</span>
+          </div>
+          <button @click="handleQuickRecord" :disabled="!quickWeight" class="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-medium shadow-md shadow-violet-500/20 disabled:opacity-40 transition-all">记录</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-white/80">
+          <div class="text-xs text-gray-400 mb-1">当前体重</div>
+          <div class="text-lg sm:text-xl font-bold text-gray-800">{{ stats.current }} <span class="text-xs text-gray-400 font-normal">kg</span></div>
+        </div>
+        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-white/80">
+          <div class="text-xs text-gray-400 mb-1">较上次</div>
+          <div class="text-lg sm:text-xl font-bold" :class="stats.change > 0 ? 'text-rose-500' : stats.change < 0 ? 'text-emerald-500' : 'text-gray-800'">
+            {{ stats.change > 0 ? '+' : '' }}{{ stats.change }} <span class="text-xs text-gray-400 font-normal">kg</span>
+          </div>
+        </div>
+        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-white/80">
+          <div class="text-xs text-gray-400 mb-1">最低 / 最高</div>
+          <div class="text-lg sm:text-xl font-bold text-gray-800">{{ stats.min }} / {{ stats.max }} <span class="text-xs text-gray-400 font-normal">kg</span></div>
+        </div>
+        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-white/80">
+          <div class="text-xs text-gray-400 mb-1">{{ stats.bmi ? 'BMI' : '记录天数' }}</div>
+          <div v-if="stats.bmi" class="text-lg sm:text-xl font-bold">
+            {{ stats.bmi }}
+            <span class="text-xs font-normal ml-1" :class="{ 'text-blue-500': stats.bmiCategory==='偏瘦', 'text-emerald-500': stats.bmiCategory==='正常', 'text-orange-500': stats.bmiCategory==='偏胖', 'text-rose-500': stats.bmiCategory==='肥胖' }">{{ stats.bmiCategory }}</span>
+          </div>
+          <div v-else class="text-lg sm:text-xl font-bold text-gray-800">{{ stats.days }} <span class="text-xs text-gray-400 font-normal">天</span></div>
+        </div>
+      </div>
+
+      <!-- Target progress -->
+      <div v-if="stats?.targetProgress !== null" class="bg-white/60 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-white/80 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-500">目标体重: {{ stats.targetWeight }} kg</span>
+          <span class="text-xs font-medium text-violet-600">{{ stats.targetProgress }}%</span>
+        </div>
+        <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500" :style="{ width: stats.targetProgress + '%' }"></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-1.5">距目标还差 {{ Math.abs(stats.current - stats.targetWeight).toFixed(1) }} kg</div>
+      </div>
+
       <!-- Chart -->
       <div class="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm border border-white/80 mb-4 sm:mb-5">
-        <h3 class="text-sm sm:text-base font-bold text-gray-700 mb-3">体重趋势</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm sm:text-base font-bold text-gray-700">体重趋势</h3>
+          <button @click="toggleCompare" class="px-2 py-1 text-[10px] sm:text-xs rounded-lg transition-all" :class="compareMode ? 'bg-violet-100 text-violet-700 font-medium' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'">对比</button>
+        </div>
+        <div v-if="compareMode" class="flex gap-2 mb-3 flex-wrap">
+          <button v-for="p in store.profiles" :key="p.id" @click="toggleCompareProfile(p.id)" class="px-2 py-1 text-[10px] rounded-lg border transition-all" :class="compareSet.has(p.id) ? 'text-white border-transparent' : 'text-gray-500 border-gray-200 bg-white'" :style="compareSet.has(p.id) ? { background: p.color } : {}">{{ p.name }}</button>
+        </div>
+        <div class="flex gap-1 mb-3">
+          <button v-for="opt in rangeOptions" :key="opt.value" @click="timeRange = opt.value" class="px-2 py-1 text-[10px] sm:text-xs rounded-lg transition-all" :class="timeRange === opt.value ? 'bg-violet-100 text-violet-700 font-medium' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'">{{ opt.label }}</button>
+        </div>
         <div class="relative" style="height: 220px">
           <canvas ref="chartRef"></canvas>
           <div v-if="store.records.length === 0" class="absolute inset-0 flex items-center justify-center bg-white/40 rounded-lg">
@@ -297,36 +497,36 @@ function formatDate(dateStr) {
       </div>
     </div>
 
-    <!-- Create Profile Modal -->
+    <!-- Profile Modal (Create + Edit) -->
     <div v-if="showProfileModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" @click.self="showProfileModal = false">
       <div class="bg-white rounded-2xl shadow-2xl p-5 sm:p-6 w-full max-w-sm border border-white/80" @click.stop>
-        <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-4">新建角色</h3>
+        <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-4">{{ editingProfile ? '编辑角色' : '新建角色' }}</h3>
         <div class="space-y-4">
           <div>
             <label class="block text-xs sm:text-sm font-medium text-gray-600 mb-1">角色名称</label>
-            <input
-              v-model="newProfileName"
-              placeholder="如：我自己、妈妈"
-              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
-            />
+            <input v-model="profileForm.name" placeholder="如：我自己、妈妈" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all" />
           </div>
           <div>
             <label class="block text-xs sm:text-sm font-medium text-gray-600 mb-2">颜色</label>
             <div class="flex gap-2 flex-wrap">
-              <button
-                v-for="c in colorOptions"
-                :key="c.value"
-                @click="newProfileColor = c.value"
-                class="w-8 h-8 rounded-full border-2 transition-all duration-200"
-                :class="newProfileColor === c.value ? 'border-gray-800 scale-110 shadow-md' : 'border-transparent'"
-                :style="{ background: c.value }"
-              ></button>
+              <button v-for="c in colorOptions" :key="c.value" @click="profileForm.color = c.value" class="w-8 h-8 rounded-full border-2 transition-all duration-200" :class="profileForm.color === c.value ? 'border-gray-800 scale-110 shadow-md' : 'border-transparent'" :style="{ background: c.value }"></button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-gray-600 mb-1">身高 (cm)</label>
+              <input v-model.number="profileForm.height" type="number" step="0.1" placeholder="170" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+              <p class="text-[10px] text-gray-400 mt-0.5">设置后自动计算 BMI</p>
+            </div>
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-gray-600 mb-1">目标体重 (kg)</label>
+              <input v-model.number="profileForm.target_weight" type="number" step="0.1" placeholder="60.0" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
             </div>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-5">
           <button @click="showProfileModal = false" class="px-4 py-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">取消</button>
-          <button @click="handleCreateProfile" class="px-4 py-2 text-xs sm:text-sm text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl hover:from-violet-700 hover:to-fuchsia-700 transition-all shadow-md shadow-violet-500/20">创建</button>
+          <button @click="handleSaveProfile" class="px-4 py-2 text-xs sm:text-sm text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl hover:from-violet-700 hover:to-fuchsia-700 transition-all shadow-md shadow-violet-500/20">{{ editingProfile ? '保存' : '创建' }}</button>
         </div>
       </div>
     </div>

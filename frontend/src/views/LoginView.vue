@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 
-const form = ref({ username: '', password: '' })
+const form = ref({ username: '', password: '', remember_me: true })
 const error = ref('')
 const loading = ref(false)
 
@@ -62,6 +62,17 @@ async function handleLogin() {
           placeholder="请输入密码"
           class="w-full px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-400 transition-all duration-300 bg-white/50 focus:bg-white shadow-sm text-sm sm:text-base"
         />
+      </div>
+
+      <div class="mb-5 sm:mb-6 relative z-10">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            v-model="form.remember_me"
+            type="checkbox"
+            class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+          />
+          <span class="text-sm text-gray-600">记住我（90天内免登录）</span>
+        </label>
       </div>
 
       <button

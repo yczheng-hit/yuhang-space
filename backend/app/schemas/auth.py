@@ -13,6 +13,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
+    remember_me: bool = False
 
 
 class TokenResponse(BaseModel):

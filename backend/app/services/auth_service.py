@@ -54,17 +54,18 @@ async def register(db: AsyncSession, req: RegisterRequest) -> User:
     return user
 
 
-async def login(db: AsyncSession, username: str, password: str) -> dict:
-    """登录并返回 Token。"""
+async def login(db: AsyncSession, username: str, password: str, remember_me: bool = False) -> dict:
+    """登录并返回 Token。remember_me 时 refresh_token 有效期延长到 90 天。"""
     user = await get_user_by_username(db, username)
     if user is None or not verify_password(password, user.hashed_password):
         raise UnauthorizedException("用户名或密码错误")
     if not user.is_active:
         raise UnauthorizedException("账户已禁用")
 
+    refresh_days = 90 if remember_me else None
     return {
         "access_token": create_access_token(str(user.id)),
-        "refresh_token": create_refresh_token(str(user.id)),
+        "refresh_token": create_refresh_token(str(user.id), days=refresh_days),
         "token_type": "bearer",
     }
 

@@ -25,7 +25,7 @@ async def register(req: RegisterRequest, db: DBSession):
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: DBSession):
     """用户登录。"""
-    return await auth_service.login(db, req.username, req.password)
+    return await auth_service.login(db, req.username, req.password, req.remember_me)
 
 
 @router.post("/refresh", response_model=dict)
